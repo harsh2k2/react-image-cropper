@@ -20,6 +20,12 @@ const ImageCropper = ({ closeModal, updateAvatar }) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    if (file.size > 1024 * 1024) {
+      // 1 MB = 1024 * 1024 bytes
+      setError("Image size must be less than 1 MB.");
+      return;
+    }
+
     const reader = new FileReader();
     reader.addEventListener("load", () => {
       const imageElement = new Image();
