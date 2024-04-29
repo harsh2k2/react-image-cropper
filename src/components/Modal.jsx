@@ -22,6 +22,7 @@ const Modal = ({ updateAvatar, closeModal }) => {
                 <span className="sr-only">Close menu</span>
                 <CloseIcon />
               </button>
+
               <ImageCropper
                 updateAvatar={updateAvatar}
                 closeModal={closeModal}

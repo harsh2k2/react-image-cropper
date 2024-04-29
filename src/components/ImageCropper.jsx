@@ -1,13 +1,15 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import ReactCrop, {
   centerCrop,
   convertToPixelCrop,
   makeAspectCrop,
 } from "react-image-crop";
 import setCanvasPreview from "../setCanvasPreview";
+import { Toaster } from "react-hot-toast";
+import { toast } from "react-hot-toast";
 
 const ASPECT_RATIO = 1;
-const MIN_DIMENSION = 150;
+const MIN_DIMENSION = 100;
 
 const ImageCropper = ({ closeModal, updateAvatar }) => {
   const imgRef = useRef(null);
@@ -15,14 +17,56 @@ const ImageCropper = ({ closeModal, updateAvatar }) => {
   const [imgSrc, setImgSrc] = useState("");
   const [crop, setCrop] = useState();
   const [error, setError] = useState("");
+  const [rotation, setRotation] = useState(0);
+
+  const rotateImage = () => {
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    const img = imgRef.current;
+    const width = img.naturalWidth;
+    const height = img.naturalHeight;
+
+    // Set canvas dimensions
+    canvas.width = width;
+    canvas.height = height;
+
+    // Clear canvas
+    ctx.clearRect(0, 0, width, height);
+
+    // Save the unrotated context of the canvas so we can restore it later
+    ctx.save();
+
+    // Move registration point to the center of the canvas
+    ctx.translate(width / 2, height / 2);
+
+    // Rotate the canvas to the specified degrees
+    ctx.rotate((rotation * Math.PI) / 180);
+
+    // Move registration point back to the top left corner of canvas
+    ctx.translate(-width / 2, -height / 2);
+
+    // Draw the image
+    ctx.drawImage(img, 0, 0, width, height);
+
+    // Restore the context to the unrotated state
+    ctx.restore();
+
+    // Convert the canvas to a data URL and update the imgSrc state
+    const dataUrl = canvas.toDataURL();
+    setImgSrc(dataUrl);
+
+    // Update the rotation state
+    setRotation((prevRotation) => (prevRotation + 90) % 360);
+  };
 
   const onSelectFile = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 1024 * 1024) {
+    if (file.size > 1024 * 1024 * 5) {
       // 1 MB = 1024 * 1024 bytes
-      setError("Image size must be less than 1 MB.");
+      // setError("Image size must be less than 1 MB.");
+      toast.error("Image size must be less than 1 MB.");
       return;
     }
 
@@ -60,10 +104,27 @@ const ImageCropper = ({ closeModal, updateAvatar }) => {
     );
     const centeredCrop = centerCrop(crop, width, height);
     setCrop(centeredCrop);
+
+    // if (imgRef.current) {
+    //   imgRef.current.style.transform = `rotate(${rotation}deg)`;
+    // }
   };
+
+  // useEffect(() => {
+  //   if (imgRef.current) {
+  //     onImageLoad({ currentTarget: imgRef.current });
+  //   }
+  // }, [rotation]);
+
+  useEffect(() => {
+    if (imgRef.current) {
+      onImageLoad({ currentTarget: imgRef.current });
+    }
+  }, [imgSrc]);
 
   return (
     <>
+      <Toaster />
       <label className="block mb-3 w-fit">
         <span className="sr-only">Choose profile photo</span>
         <input
@@ -92,6 +153,12 @@ const ImageCropper = ({ closeModal, updateAvatar }) => {
               onLoad={onImageLoad}
             />
           </ReactCrop>
+          <button
+            className="text-white font-mono text-xs py-2 px-4 rounded-2xl mt-4 bg-sky-500 hover:bg-sky-600"
+            onClick={rotateImage}
+          >
+            Rotate Image
+          </button>
           <button
             className="text-white font-mono text-xs py-2 px-4 rounded-2xl mt-4 bg-sky-500 hover:bg-sky-600"
             onClick={() => {
